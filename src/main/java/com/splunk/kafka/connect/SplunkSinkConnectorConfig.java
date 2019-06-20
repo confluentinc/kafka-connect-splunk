@@ -75,81 +75,73 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
 
     // Kafka configuration description strings
     // Required Parameters
-    static final String URI_DOC = "Splunk HEC URIs. Either a list of FQDNs or IPs of all Splunk indexers, separated "
-            + "with a \",\", or a load balancer. The connector will load balance to indexers using "
-            + "round robin. Splunk Connector will round robin to this list of indexers. "
-            + "https://hec1.splunk.com:8088,https://hec2.splunk.com:8088,https://hec3.splunk.com:8088";
-    static final String TOKEN_DOC = "Splunk Http Event Collector token.";
+    static final String URI_DOC = "Splunk HEC URIs. Either a list of FQDNs or IPs of all Splunk indexers, separated " +
+            "with a ``,``, or a load balancer. The connector load balances to indexers using round robin. Splunk " +
+            "Connector round robins to this list of indexers: " +
+            "``https://hec1.splunk.com:8088,https://hec2.splunk.com:8088,https://hec3.splunk.com:8088``\n";
+    static final String TOKEN_DOC = "Splunk Http Event Collector (HEC) token.";
     // General Parameters
-    static final String INDEX_DOC = "Splunk index names for Kafka topic data separated by comma for multiple topics to "
-            + "indexers (\"prod-index1,prod-index2,prod-index3\").";
-    static final String SOURCE_DOC = "Splunk event source metadata for Kafka topic data. The same configuration rules "
-            + "as indexes can be applied. If left un-configured, the default source binds to"
-            + " the HEC token. By default, this setting is empty.";
-    static final String SOURCETYPE_DOC = "Splunk event sourcetype metadata for Kafka topic data. The same configuration "
-            + "rules as indexes can be applied here. If left unconfigured, the default source"
-            + " binds to the HEC token. By default, this setting is empty"
-            + "through to splunk. Only use with JSON Event endpoint";
+    static final String INDEX_DOC = "Splunk index names for Kafka topic data separated by a comma for multiple topics " +
+            "to indexers. Example: \"prod-index1,prod-index2,prod-index3\"";
+    static final String SOURCE_DOC = "Splunk event source metadata for Kafka topic data. The same configuration rules " +
+            "as indexes can be applied. If unconfigured, the default source binds to the HEC token. " +
+            "By default, this setting is empty.";
+    static final String SOURCETYPE_DOC = "Splunk event sourcetype metadata for Kafka topic data. The same configuration " +
+            "rules as indexes can be applied here. If unconfigured, the default source binds to the HEC token. By " +
+            "default, this setting is empty. Only configure this when using the JSON Event endpoint.";
     static final String TOTAL_HEC_CHANNEL_DOC = "Total HEC Channels used to post events to Splunk. When enabling HEC ACK, "
             + "setting to the same or 2X number of indexers is generally good.";
-    static final String MAX_HTTP_CONNECTION_PER_CHANNEL_DOC = "Max HTTP connections pooled for one HEC Channel "
-            + "when posting events to Splunk.";
-    static final String MAX_BATCH_SIZE_DOC = "Maximum batch size when posting events to Splunk. The size is the actual number of "
-            + "Kafka events not the byte size. By default, this is set to 100.";
-    static final String HTTP_KEEPALIVE_DOC = "Valid settings are true or false. Enables or disables HTTP connection "
-            + "keep-alive. By default, this is set to true";
+    static final String MAX_HTTP_CONNECTION_PER_CHANNEL_DOC = "The maximum number of HTTP connections pooled for one " +
+            "HEC Channel when posting events to Splunk.";
+    static final String MAX_BATCH_SIZE_DOC = "The maximum batch size when posting events to Splunk. The size is the " +
+            "actual number of Kafka events, not the byte size. By default, this is set to 500.";
+    static final String HTTP_KEEPALIVE_DOC = "This setting enables or disables HTTP connection keep-alive. By default, " +
+            "this is set to ``true``.";
     static final String HEC_THREADS_DOC = "Controls how many threads are spawned to do data injection via HEC in a single "
             + "connector task. By default, this is set to 1.";
-    static final String SOCKET_TIMEOUT_DOC = "Max duration in seconds to read / write data to network before internal TCP "
-            + "Socket timeout.By default, this is set to 60 seconds.";
-    static final String SSL_VALIDATE_CERTIFICATES_DOC = "Valid settings are true or false. Enables or disables HTTPS "
-            + "certification validation. By default, this is set to true.";
+    static final String SOCKET_TIMEOUT_DOC = "Maximum duration in seconds to read/write data to network before internal " +
+            "TCP Socket timeout. By default, this is set to 60 seconds.";
+    static final String SSL_VALIDATE_CERTIFICATES_DOC = "Enables or disables HTTPS certification validation. " +
+            "By default, this is set to ``true``.";
     // Acknowledgement Parameters
     // Use Ack
-    static final String ACK_DOC = "Valid settings are true or false. When set to true Splunk Connect for Kafka will "
-            + "poll event ACKs for POST events before check-pointing the Kafka offsets. This is used "
-            + "to prevent data loss, as this setting implements guaranteed delivery. By default, this "
-            + "setting is set to true.";
-    static final String ACK_POLL_INTERVAL_DOC = "This setting is only applicable when splunk.hec.ack.enabled is set to "
-            + "true. Internally it controls the event ACKs polling interval. By default, "
-            + "this setting is 10 seconds.";
-    static final String ACK_POLL_THREADS_DOC = "This setting is used for performance tuning and is only applicable when "
-            + "splunk.hec.ack.enabled is set to true. It controls how many threads "
-            + "should be spawned to poll event ACKs. By default, this is set to 1.";
-    static final String EVENT_TIMEOUT_DOC = "This setting is applicable when splunk.hec.ack.enabled is set to true. "
-            + "When events are POSTed to Splunk and before they are ACKed, this setting "
-            + "determines how long the connector will wait before timing out and resending. "
-            + "By default, this is set to 300 seconds.";
-    static final String MAX_OUTSTANDING_EVENTS_DOC = "Maximum amount of un-acknowledged events kept in memory by connector. "
-            + "Will trigger back-pressure event to slow collection. By default, this "
-            + "is set to 1000000.";
-    static final String MAX_RETRIES_DOC = "Number of retries for failed batches before giving up. By default this is set to "
-            + "-1 which will retry indefinitely.";
+    static final String ACK_DOC = "When set to ``true``, connector polls event ACKs for POST events before " +
+            "check-pointing the Kafka offsets. This is used to prevent data loss, as this setting implements guaranteed " +
+            "delivery. By default, this setting is set to ``true``.\n";
+    static final String ACK_POLL_INTERVAL_DOC = "Controls the event ACKs polling interval. This setting is only " +
+            "applicable when ``splunk.hec.ack.enabled`` is set to ``true``.  By default, this setting is ``10`` seconds.";
+    static final String ACK_POLL_THREADS_DOC = "Controls how many threads should be spawned to poll event ACKs. " +
+            "This setting is used for performance tuning and is only applicable when ``splunk.hec.ack.enabled`` is set " +
+            "to ``true``.  By default, this is set to ``2``.\n";
+    static final String EVENT_TIMEOUT_DOC = "When events are sent to Splunk and before they are acknowledged, this " +
+            "setting determines how long the connector will wait before timing out and resending. This setting is " +
+            "applicable when ``splunk.hec.ack.enabled`` is set to ``true``. By default, this is set to ``300`` seconds.";
+    static final String MAX_OUTSTANDING_EVENTS_DOC = "Maximum amount of un-acknowledged events kept in memory by the " +
+            "connector. Will trigger back-pressure event to slow collection. By default, this is set to ``1000000``.";
+    static final String MAX_RETRIES_DOC = "The number of retries for a failed batch before the task is killed. " +
+            "When set to ``-1`` (the default) the connector retries indefinitely.";
 
-    static final String HEC_BACKOFF_PRESSURE_THRESHOLD_DOC = "The amount of time Splunk Connect for Kafka waits on errors "
-            +   "sending events to Splunk to attempt resending it";
+    static final String HEC_BACKOFF_PRESSURE_THRESHOLD_DOC = "The amount of time the connector waits on errors sending " +
+            "events to Splunk to attempt resending it.";
     // Endpoint Parameters
-    static final String RAW_DOC = "Set to true in order for Splunk software to ingest data using the the /raw HEC "
-            + "endpoint. Default is false, which will use the /event endpoint.";
+    static final String RAW_DOC = "Set to ``true`` in order for Splunk software to ingest data using the the ``/raw`` " +
+            "HEC endpoint. Default is ``false``, which uses the ``/event`` endpoint.";
     // /raw endpoint only
-    static final String LINE_BREAKER_DOC = "Only applicable to /raw HEC endpoint. The setting is used to specify a custom "
-            + "line breaker to help Splunk separate the events correctly. Note: For example"
-            + "you can specify \"#####\" as a special line breaker.By default, this setting is "
-            + "empty.";
+    static final String LINE_BREAKER_DOC = "This setting is used to specify a custom line breaker to help Splunk " +
+            "separate the events correctly. Only applicable to ``/raw`` HEC endpoint. For example, you can specify " +
+            "``#####`` as a special line breaker. By default, this setting is empty.";
     // /event endpoint only
-    static final String USE_RECORD_TIMESTAMP_DOC = "Valid settings are true or false. When set to `true`, The timestamp "
-            + "is retrieved from the Kafka record and passed to Splunk as a HEC meta-data "
-            + "override. This will index events in Splunk with the record timestamp. By "
-            + "default, this is set to true.";
-    static final String ENRICHMENT_DOC = "Only applicable to /event HEC endpoint. This setting is used to enrich raw data "
-            + "with extra metadata fields. It contains a list of key value pairs separated by \",\"."
-            + " The configured enrichment metadata will be indexed along with raw event data "
-            + "by Splunk software. Note: Data enrichment for /event HEC endpoint is only available "
-            + "in Splunk Enterprise 6.5 and above. By default, this setting is empty.";
-    static final String TRACK_DATA_DOC = "Valid settings are true or false. When set to true, data loss and data injection "
-            + "latency metadata will be indexed along with raw data. This setting only works in "
-            + "conjunction with /event HEC endpoint (\"splunk.hec.raw\" : \"false\"). By default"
-            + ", this is set to false.";
+    static final String USE_RECORD_TIMESTAMP_DOC = "When set to ``true``, the timestamp is retrieved from the Kafka " +
+            "record and passed to Splunk as a HEC meta-data override. This indexes events in Splunk with the record " +
+            "timestamp. By default, this is set to ``true``.";
+    static final String ENRICHMENT_DOC = "This setting is used to enrich raw data with extra metadata fields. It " +
+            "contains a list of key value pairs separated by ``,``. The configured enrichment metadata will be indexed " +
+            "along with raw event data by Splunk software. Only applicable to ``/event`` HEC endpoint. Note: Data " +
+            "enrichment for ``/event`` HEC endpoint is only available in Splunk Enterprise 6.5 and above. By default, " +
+            "this setting is empty.";
+    static final String TRACK_DATA_DOC = "When set to ``true``, data loss and data injection latency metadata will be " +
+            "indexed along with raw data. This setting only works in conjunction with ``/event`` HEC endpoint " +
+            "(``splunk.hec.raw`` : ``false``).";
     static final String HEC_EVENT_FORMATTED_DOC = "Ensures events that are pre-formatted into the properly formatted HEC "
             + "JSON format as per http://dev.splunk.com/view/event-collector/SP-CAAAE6P have meta-data and event data indexed "
             + "correctly by Splunk.";
@@ -157,13 +149,14 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     static final String SSL_TRUSTSTORE_PATH_DOC = "Path on the local disk to the certificate trust store.";
     static final String SSL_TRUSTSTORE_PASSWORD_DOC = "Password for the trust store.";
 
-    static final String HEADER_SUPPORT_DOC = "Setting will enable Kafka Record headers to be used for meta data override";
-    static final String HEADER_CUSTOM_DOC = "Setting will enable look for Record headers with these values and add them"
-            + "to each event if present. Custom headers are configured separated by comma for multiple headers. ex,  (\"custom_header_1,custom_header_2,custom_header_3\").";
-    static final String HEADER_INDEX_DOC = "Header to use for Splunk Header Index";
-    static final String HEADER_SOURCE_DOC = "Header to use for Splunk Header Source";
-    static final String HEADER_SOURCETYPE_DOC = "Header to use for Splunk Header Sourcetype";
-    static final String HEADER_HOST_DOC = "Header to use for Splunk Header Host";
+    static final String HEADER_SUPPORT_DOC = "This setting enables Kafka Record headers to be used for meta data override.";
+    static final String HEADER_CUSTOM_DOC = "This setting enables looking for Record headers with these values and " +
+            "adding them to each event if present. Multiple headers are separated by comma. For example: " +
+            "``custom_header_1,custom_header_2,custom_header_3``.";
+    static final String HEADER_INDEX_DOC = "Header to use for Splunk Header Index.";
+    static final String HEADER_SOURCE_DOC = "Header to use for Splunk Header Source.";
+    static final String HEADER_SOURCETYPE_DOC = "Header to use for Splunk Header Sourcetype.";
+    static final String HEADER_HOST_DOC = "Header to use for Splunk Header Host.";
 
     final String splunkToken;
     final String splunkURI;
@@ -413,4 +406,9 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
         }
         return metaMap;
     }
+
+    public static void main(String[] args) {
+    System.out.println(conf().toEnrichedRst());
+  }
+
 }

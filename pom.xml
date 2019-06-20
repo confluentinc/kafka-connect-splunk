@@ -295,4 +295,33 @@
 
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <!-- Generate the configuration documentation -->
+            <id>docs</id>
+
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <!-- Execute with: mvn -Pdocs exec:java@sink-config-docs -->
+                                <id>sink-config-docs</id>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.splunk.kafka.connect.SplunkSinkConnectorConfig</mainClass>
+                                    <classpathScope>compile</classpathScope>
+                                </configuration>
+                            </execution>
+
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
