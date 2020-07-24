@@ -207,6 +207,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
         super(conf(), taskConfig);
         splunkToken = getPassword(TOKEN_CONF).value();
         splunkURI = getString(URI_CONF);
+        // TODO: Validate the https URI. Deleting the draft changes.
         raw = getBoolean(RAW_CONF);
         ack = getBoolean(ACK_CONF);
         indexes = getString(INDEX_CONF);
