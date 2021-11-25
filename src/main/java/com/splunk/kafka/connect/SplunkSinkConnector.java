@@ -35,15 +35,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SplunkSinkConnector extends SinkConnector {
     private static final Logger log = LoggerFactory.getLogger(SplunkSinkConnector.class);
     private Map<String, String> taskConfig;
-    private static final int CONFIG_VALIDATION_TIMEOUT_SECONDS = 10;
 
     @Override
     public void start(Map<String, String> taskConfig) {
@@ -84,7 +81,11 @@ public class SplunkSinkConnector extends SinkConnector {
     @Override
     public Config validate(Map<String, String> connectorConfigs) {
         Config config = super.validate(connectorConfigs);
-        if (config.configValues().stream().anyMatch(cv -> !cv.errorMessages().isEmpty())) {
+        SplunkSinkConnectorConfig connectorConfig;
+        try {
+            connectorConfig = new SplunkSinkConnectorConfig(connectorConfigs);
+        } catch (Exception e) {
+            log.warn("Validating configuration caught an exception", e);
             return config;
         }
 
@@ -94,14 +95,6 @@ public class SplunkSinkConnector extends SinkConnector {
                 .collect(Collectors.toMap(
                     ConfigValue::name,
                     Function.identity()));
-
-        SplunkSinkConnectorConfig connectorConfig;
-        try {
-            connectorConfig = new SplunkSinkConnectorConfig(connectorConfigs);
-        } catch (Exception e) {
-            log.error("Validating configuration caught an exception", e);
-            return config;
-        }
 
         validateAccess(connectorConfig, configValues);
 
@@ -122,13 +115,11 @@ public class SplunkSinkConnector extends SinkConnector {
      * @param configValues The configuration ConfigValues
      */
     private void validateAccess(SplunkSinkConnectorConfig connectorConfig, Map<String, ConfigValue> configValues) {
-        HecConfig config = connectorConfig.getHecConfig();
+        HecConfig hecConfig = connectorConfig.getHecConfig();
 
-        try (CloseableHttpClient httpClient = createHttpClient(config)) {
-            List<String> uris = config.getUris();
-            final String hecToken = config.getToken();
+        try (CloseableHttpClient httpClient = createHttpClient(hecConfig)) {
+            List<String> uris = hecConfig.getUris();
 
-            CountDownLatch latch = new CountDownLatch(config.getUris().size());
             Map<String, String> validationFailedIndexers = new LinkedHashMap<>();
 
             for (String uri : uris) {
@@ -136,7 +127,7 @@ public class SplunkSinkConnector extends SinkConnector {
                 HttpPost request = new HttpPost(uri + "/services/collector");
                 request.setEntity(new StringEntity(""));
 
-                request.addHeader(HttpHeaders.AUTHORIZATION, String.format("Splunk %s", hecToken));
+                request.addHeader(HttpHeaders.AUTHORIZATION, String.format("Splunk %s", hecConfig.getToken()));
 
                 int status = -1;
                 try (CloseableHttpResponse response = httpClient.execute(request)) {
@@ -144,35 +135,31 @@ public class SplunkSinkConnector extends SinkConnector {
                     if (status == 400) {
                         log.info("Validation succeeded for indexer {}", uri);
                     } else if (status == 403) {
-                        log.error("Invalid HEC token for indexer {}", uri);
+                        log.warn("Invalid HEC token for indexer {}", uri);
                         validationFailedIndexers.put(uri, response.getStatusLine().toString());
                     } else {
-                        log.error("Validation failed for {}", uri);
+                        log.warn("Validation failed for {}", uri);
                         validationFailedIndexers.put(uri, response.getStatusLine().toString());
                     }
                 } catch (Exception e) {
                     log.error("Caught exception while validating", e);
                     validationFailedIndexers.put(uri, e.getMessage());
-                } finally {
-                    latch.countDown();
                 }
             }
 
-            latch.await(CONFIG_VALIDATION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
             if (!validationFailedIndexers.isEmpty()) {
-                log.error("Validation failed: " + validationFailedIndexers);
-                configValues.get(SplunkSinkConnectorConfig.URI_CONF)
-                    .addErrorMessage("Validation Failed: " + validationFailedIndexers);
-                configValues.get(SplunkSinkConnectorConfig.TOKEN_CONF)
-                    .addErrorMessage("Validation Failed: " + validationFailedIndexers);
+                log.warn("Validation failed: " + validationFailedIndexers);
+                recordErrors(configValues,
+                    "Validation Failed: " + validationFailedIndexers,
+                    SplunkSinkConnectorConfig.URI_CONF,
+                    SplunkSinkConnectorConfig.TOKEN_CONF);
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             log.error("Configuration validation error", e);
-            configValues.get(SplunkSinkConnectorConfig.URI_CONF)
-                .addErrorMessage("Configuration validation error: " + e.getMessage());
-            configValues.get(SplunkSinkConnectorConfig.TOKEN_CONF)
-                .addErrorMessage("Configuration validation error: " + e.getMessage());
+            recordErrors(configValues,
+                "Configuration validation error: " + e.getMessage(),
+                SplunkSinkConnectorConfig.URI_CONF,
+                SplunkSinkConnectorConfig.TOKEN_CONF);
         }
     }
 
@@ -181,4 +168,9 @@ public class SplunkSinkConnector extends SinkConnector {
         return Hec.createHttpClient(config);
     }
 
+    void recordErrors(Map<String, ConfigValue> configValues, String message, String...keys) {
+        for (String key : keys) {
+            configValues.get(key).addErrorMessage(message);
+        }
+    }
 }
