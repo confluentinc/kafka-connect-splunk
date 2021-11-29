@@ -316,7 +316,7 @@ public final class HecAckPoller implements Poller {
     }
 
     private void handleAckPollResponse(String resp, HecChannel channel) {
-        log.debug("channel={}", channel);
+        log.debug("Ack response for channel={}", channel);
         HecAckPollResponse ackPollResult;
         try {
             ackPollResult = jsonMapper.readValue(resp, HecAckPollResponse.class);
