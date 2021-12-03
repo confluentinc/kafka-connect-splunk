@@ -123,7 +123,7 @@ public class SplunkSinkConnector extends SinkConnector {
             Map<String, String> validationFailedIndexers = new LinkedHashMap<>();
 
             for (String uri : uris) {
-                log.info("Validating " + uri);
+                log.trace("Validating " + uri);
                 HttpPost request = new HttpPost(uri + "/services/collector");
                 request.setEntity(new StringEntity(""));
 
@@ -133,12 +133,12 @@ public class SplunkSinkConnector extends SinkConnector {
                 try (CloseableHttpResponse response = httpClient.execute(request)) {
                     status = response.getStatusLine().getStatusCode();
                     if (status == 400) {
-                        log.info("Validation succeeded for indexer {}", uri);
+                        log.trace("Validation succeeded for indexer {}", uri);
                     } else if (status == 403) {
-                        log.warn("Invalid HEC token for indexer {}", uri);
+                        log.trace("Invalid HEC token for indexer {}", uri);
                         validationFailedIndexers.put(uri, response.getStatusLine().toString());
                     } else {
-                        log.warn("Validation failed for {}", uri);
+                        log.trace("Validation failed for {}", uri);
                         validationFailedIndexers.put(uri, response.getStatusLine().toString());
                     }
                 } catch (Exception e) {
@@ -148,7 +148,7 @@ public class SplunkSinkConnector extends SinkConnector {
             }
 
             if (!validationFailedIndexers.isEmpty()) {
-                log.warn("Validation failed: " + validationFailedIndexers);
+                log.trace("Validation failed: " + validationFailedIndexers);
                 recordErrors(configValues,
                     "Validation Failed: " + validationFailedIndexers,
                     SplunkSinkConnectorConfig.URI_CONF,
