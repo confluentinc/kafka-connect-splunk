@@ -148,7 +148,7 @@ public class SplunkSinkConnector extends SinkConnector {
             }
 
             if (!validationFailedIndexers.isEmpty()) {
-                log.warn("Validation failed: " + validationFailedIndexers);
+                log.trace("Validation failed: " + validationFailedIndexers);
                 recordErrors(configValues,
                     "Validation Failed: " + validationFailedIndexers,
                     SplunkSinkConnectorConfig.URI_CONF,
