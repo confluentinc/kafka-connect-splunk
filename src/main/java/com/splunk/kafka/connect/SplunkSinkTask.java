@@ -312,10 +312,14 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
         return VersionUtils.getVersionString();
     }
 
+    //
+    // -PollerCallback
+    //
     public void onEventCommitted(final List<EventBatch> batches) {
         // for (final EventBatch batch: batches) {
         // assert batch.isCommitted();
         // }
+        log.debug("{} batches committed", batches.size());
     }
 
     public void onEventFailure(final List<EventBatch> batches, Exception ex) {
@@ -324,6 +328,9 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
             tracker.addFailedEventBatch(batch);
         }
     }
+    //
+    // PollerCallback-
+    //
 
     private Event createHecEventFrom(final SinkRecord record) {
         if (connectorConfig.raw) {

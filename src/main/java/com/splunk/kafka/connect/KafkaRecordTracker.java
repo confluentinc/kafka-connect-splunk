@@ -29,9 +29,9 @@ import org.slf4j.LoggerFactory;
 
 final class KafkaRecordTracker {
     private static final Logger log = LoggerFactory.getLogger(SplunkSinkTask.class);
-    private Map<TopicPartition, TreeMap<Long, EventBatch>> all; // TopicPartition + Long offset represents the SinkRecord
+    private final Map<TopicPartition, TreeMap<Long, EventBatch>> all; // TopicPartition + Long offset represents the SinkRecord
     private long total;
-    private ConcurrentLinkedQueue<EventBatch> failed;
+    private final ConcurrentLinkedQueue<EventBatch> failed;
 
     public KafkaRecordTracker() {
         all = new HashMap<>();
@@ -52,12 +52,7 @@ final class KafkaRecordTracker {
             if (event.getTied() instanceof SinkRecord) {
                 final SinkRecord record = (SinkRecord) event.getTied();
                 TopicPartition tp = new TopicPartition(record.topic(), record.kafkaPartition());
-                TreeMap<Long, EventBatch> tpRecords = all.get(tp);
-                if (tpRecords == null) {
-                    tpRecords = new TreeMap<>();
-                    all.put(tp, tpRecords);
-                }
-
+                TreeMap<Long, EventBatch> tpRecords = all.computeIfAbsent(tp, k -> new TreeMap<>());
                 if (!tpRecords.containsKey(record.kafkaOffset())) {
                     tpRecords.put(record.kafkaOffset(), batch);
                     total += 1;
@@ -85,7 +80,7 @@ final class KafkaRecordTracker {
         for (Map.Entry<TopicPartition, TreeMap<Long, EventBatch>> entry: all.entrySet()) {
             long offset = -1;
             Iterator<Map.Entry<Long, EventBatch>> iter = entry.getValue().entrySet().iterator();
-            for (; iter.hasNext();) {
+            while (iter.hasNext()) {
                 Map.Entry<Long, EventBatch> e = iter.next();
                 if (e.getValue().isCommitted()) {
                     offset = e.getKey();
