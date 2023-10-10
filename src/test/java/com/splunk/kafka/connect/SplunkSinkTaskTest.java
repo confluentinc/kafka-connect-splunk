@@ -242,6 +242,25 @@ public class SplunkSinkTaskTest {
     }
 
     @Test
+    public void putWithNullIndexHeaderValue() {
+        UnitUtil uu = new UnitUtil(0);
+        Map<String, String> config = uu.createTaskConfig();
+        config.put(SplunkSinkConnectorConfig.RAW_CONF, String.valueOf(true));
+        config.put(SplunkSinkConnectorConfig.ACK_CONF, String.valueOf(true));
+        config.put(SplunkSinkConnectorConfig.MAX_BATCH_SIZE_CONF, String.valueOf(1));
+        config.put(SplunkSinkConnectorConfig.HEADER_SUPPORT_CONF, String.valueOf("true"));
+        config.put(SplunkSinkConnectorConfig.HEADER_INDEX_CONF, "index");
+        SplunkSinkTask task = new SplunkSinkTask();
+        HecMock hec = new HecMock(task);
+        hec.setSendReturnResult(HecMock.success);
+        task.setHec(hec);
+        task.start(config);
+        task.put(createSinkRecordWithNullIndexHeaderValue());
+        Assert.assertEquals(1, hec.getBatches().size());
+        task.stop();
+    }
+
+    @Test
     public void putWithRawAndAck() {
         putWithSuccess(true, true);
     }
@@ -338,6 +357,12 @@ public class SplunkSinkTaskTest {
         List<SinkRecord> records = new ArrayList<>();
         SinkRecord rec = null;
         records.add(rec);
+        return records;
+    }
+
+    private Collection<SinkRecord> createSinkRecordWithNullIndexHeaderValue() {
+        List<SinkRecord> records = new ArrayList<>(createSinkRecords(1));
+        records.get(0).headers().add("index", null, null);
         return records;
     }
 
