@@ -53,7 +53,7 @@ public class HttpClientBuilderTest {
             .setSocketSendBufferSize(1024)
             .setSocketTimeout(120)
             .setDisableSSLCertVerification(false)
-            .setDisableHostnameVerification(false)
+            .setDisableHostnameVerification(true)
             .build();
         Assert.assertNotNull(client);
     }
