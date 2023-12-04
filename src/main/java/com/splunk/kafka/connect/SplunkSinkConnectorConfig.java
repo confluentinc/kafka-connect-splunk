@@ -77,7 +77,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     // Trust store
     static final String SSL_TRUSTSTORE_PATH_CONF = "splunk.hec.ssl.trust.store.path";
     static final String SSL_TRUSTSTORE_PASSWORD_CONF = "splunk.hec.ssl.trust.store.password";
-    static final String DISABLE_HOSTNAME_VERIFICATION_CONF = "disable.hostname.verification";
+    static final String DISABLE_HOSTNAME_VERIFICATION_CONF = "splunk.disable.hostname.verification";
     //Headers
     static final String HEADER_SUPPORT_CONF = "splunk.header.support";
     static final String HEADER_CUSTOM_CONF = "splunk.header.custom";
