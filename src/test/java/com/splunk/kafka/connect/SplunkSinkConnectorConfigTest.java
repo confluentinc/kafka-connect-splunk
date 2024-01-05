@@ -81,12 +81,12 @@ public class SplunkSinkConnectorConfigTest {
             taskConfig.put(SplunkSinkConnectorConfig.DISABLE_HOSTNAME_VERIFICATION_CONF, String.valueOf(false));
             SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(taskConfig);
             HecConfig config = connectorConfig.getHecConfig();
-            Assert.assertEquals(false, config.getDisableSSLCertVerification());
+            Assert.assertEquals(false, config.getDisableHostnameVerification());
 
             taskConfig.put(SplunkSinkConnectorConfig.DISABLE_HOSTNAME_VERIFICATION_CONF, String.valueOf(true));
             connectorConfig = new SplunkSinkConnectorConfig(taskConfig);
             config = connectorConfig.getHecConfig();
-            Assert.assertEquals(true, config.getDisableSSLCertVerification());
+            Assert.assertEquals(true, config.getDisableHostnameVerification());
 
     }
 
