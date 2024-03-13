@@ -100,7 +100,7 @@ public class SplunkSinkConnector extends SinkConnector {
                     ConfigValue::name,
                     Function.identity()));
 
-        HecConfig hecConfig = connectorConfig.getHecConfig();
+        HecConfig hecConfig = connectorConfig.getHecConfigForValidate();
         try (CloseableHttpClient httpClient = createHttpClient(hecConfig)) {
 
             if (!validateCollector(httpClient, hecConfig, configValues)) {
