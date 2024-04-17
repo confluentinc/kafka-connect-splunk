@@ -485,7 +485,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
                     topicMeta.put(SOURCE, meta);
                 }
 
-                metaMap.put(topic, topicMeta);
+                metaMap.put(topic.trim(), topicMeta);
                 idx += 1;
             }
         }
