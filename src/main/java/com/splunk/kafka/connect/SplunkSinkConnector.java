@@ -17,6 +17,7 @@ package com.splunk.kafka.connect;
 
 import com.splunk.hecclient.Hec;
 import com.splunk.hecclient.HecConfig;
+import com.splunk.hecclient.HecException;
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -109,6 +110,13 @@ public class SplunkSinkConnector extends SinkConnector {
 
             validateAccess(httpClient, hecConfig, configValues);
 
+        } catch (HecException e) {
+            log.error("Configuration validation error", e);
+            recordErrors(
+                    configValues,
+                    "Configuration validation error: " + e.getMessage(),
+                    SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PATH_CONF, SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PASSWORD_CONF
+            );
         } catch (IOException e) {
             log.error("Configuration validation error", e);
             recordErrors(
