@@ -15,6 +15,7 @@
  */
 package com.splunk.kafka.connect;
 
+import com.splunk.hecclient.HecException;
 import org.apache.http.HttpStatus;
 import org.apache.http.HttpVersion;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -266,6 +267,27 @@ class SplunkSinkConnecterTest {
         assertFalse(errorMessages.get(SplunkSinkConnectorConfig.TOKEN_CONF).get(0).contains(SPLUNK_URI_HOST1));
         assertTrue(errorMessages.get(SplunkSinkConnectorConfig.TOKEN_CONF).get(0).contains(host2));
         assertTrue(errorMessages.get(SplunkSinkConnectorConfig.TOKEN_CONF).get(0).contains(host3));
+    }
+
+
+    @Test
+    public void testHecException() throws IOException {
+        Map<String, String> connectorConfig = getConnectorConfig();
+
+        doThrow(new HecException("error loading trust store"))
+                .when(connector)
+                .createHttpClient(any());
+
+        Config config = connector.validate(connectorConfig);
+
+        Map<String, List<String>> errorMessages = config.configValues().stream()
+                .collect(Collectors.toMap(ConfigValue::name, ConfigValue::errorMessages));
+
+        assertFalse(errorMessages.get(SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PATH_CONF).isEmpty());
+        assertFalse(errorMessages.get(SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PASSWORD_CONF).isEmpty());
+
+        assertTrue(errorMessages.get(SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PATH_CONF).get(0).contains("Configuration validation error"));
+        assertTrue(errorMessages.get(SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PASSWORD_CONF).get(0).contains("Configuration validation error"));
     }
 
     private Map<String, String> getConnectorConfig() {
