@@ -15,8 +15,10 @@
  */
 package com.splunk.hecclient;
 
+import com.splunk.kafka.connect.SplunkSinkConnectorConfig;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.HttpClientContext;
@@ -25,15 +27,27 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
+import javax.security.auth.login.LoginContext;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.security.Principal;
+import java.security.PrivilegedAction;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 final class Indexer implements IndexerInf {
     private static final Logger log = LoggerFactory.getLogger(Indexer.class);
 
+    private HecConfig hecConfig;
+    private Configuration config;
     private CloseableHttpClient httpClient;
     private HttpContext context;
     private String baseUrl;
@@ -47,14 +61,18 @@ final class Indexer implements IndexerInf {
     private long backPressureThreshhold = 60 * 1000; // 1 min
 
     // Indexer doesn't own client, ack poller
-    public Indexer(String baseUrl, String hecToken, CloseableHttpClient client, Poller poller) {
+    public Indexer(
+        String baseUrl,
+        CloseableHttpClient client,
+        Poller poller,
+        HecConfig config) {
         this.httpClient = client;
         this.baseUrl = baseUrl;
-        this.hecToken = hecToken;
+        this.hecToken = config.getToken();
         this.poller = poller;
         this.context = HttpClientContext.create();
         backPressure = 0;
-
+        this.hecConfig = config;
         channel = new HecChannel(this);
 
         // Init headers
@@ -137,15 +155,66 @@ final class Indexer implements IndexerInf {
     @Override
     public synchronized String executeHttpRequest(final HttpUriRequest req) {
         CloseableHttpResponse resp;
-        try {
-            resp = httpClient.execute(req, context);
-        } catch (Exception ex) {
-            logBackPressure();
-            log.error("encountered io exception", ex);
-            throw new HecException("encountered exception when post data", ex);
+        if (hecConfig.kerberosAuthEnabled()) {
+            if (config == null) {
+                defineKerberosConfigs();
+            }
+            Set<Principal> princ = new HashSet<Principal>(1);
+            princ.add(new KerberosPrincipal(hecConfig.kerberosUser()));
+            Subject sub = new Subject(false, princ, new HashSet<Object>(), new HashSet<Object>());
+            try {
+                LoginContext lc = new LoginContext("", sub, null, config);
+                lc.login();
+                Subject serviceSubject = lc.getSubject();
+                resp = Subject.doAs(serviceSubject, new PrivilegedAction<CloseableHttpResponse>() {
+                    @Override
+                    public CloseableHttpResponse run() {
+                        try {
+                            return httpClient.execute(req, context);
+                        } catch (IOException ex) {
+                            logBackPressure();
+                            throw new HecException("Encountered exception while posting data.", ex);
+                        }
+                    }
+                });
+            } catch (Exception le) {
+                throw new HecException(
+                    "Encountered exception while authenticating via Kerberos.", le);
+            }
+        } else {
+            try {
+                resp = httpClient.execute(req, context);
+            } catch (Exception ex) {
+                logBackPressure();
+                throw new HecException("encountered exception when post data", ex);
+            }
         }
-
         return readAndCloseResponse(resp);
+    }
+
+    private void defineKerberosConfigs() {
+        config = new Configuration() {
+            @SuppressWarnings("serial")
+            @Override
+            public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+                return new AppConfigurationEntry[]{new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+                    AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, new HashMap<String, Object>() {
+                    {
+                        put("useTicketCache", "false");
+                        put("useKeyTab", "true");
+                        put("keyTab", hecConfig.kerberosKeytabLocation());
+                        //Krb5 in GSS API needs to be refreshed so it does not throw the error
+                        //Specified version of key is not available
+                        put("refreshKrb5Config", "true");
+                        put("principal", hecConfig.kerberosPrincipal());
+                        put("storeKey", "false");
+                        put("doNotPrompt", "true");
+                        put("isInitiator", "true");
+                        put("debug", "true");
+                    }
+                })};
+            }
+        };
     }
 
     private String readAndCloseResponse(CloseableHttpResponse resp) {
