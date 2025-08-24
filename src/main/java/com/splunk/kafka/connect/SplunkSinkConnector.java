@@ -16,6 +16,10 @@
 package com.splunk.kafka.connect;
 
 import com.splunk.kafka.connect.VersionUtils;
+
+import io.confluent.connect.utils.validators.all.ConfigValidation;
+
+import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
@@ -65,5 +69,14 @@ public final class SplunkSinkConnector extends SinkConnector {
     @Override
     public ConfigDef config() {
         return SplunkSinkConnectorConfig.conf();
+    }
+
+    @Override
+    public Config validate(Map<String, String> connectorConfigs) {
+        return new ConfigValidation(
+            config(),
+            connectorConfigs,
+            SplunkSinkConnectorConfig::validateKerberosConfigs
+        ).validate();
     }
 }
