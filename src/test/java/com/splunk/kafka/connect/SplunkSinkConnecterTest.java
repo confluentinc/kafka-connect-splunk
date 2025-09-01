@@ -16,6 +16,7 @@
 package com.splunk.kafka.connect;
 
 import com.splunk.hecclient.HecException;
+import com.splunk.hecclient.HecConfig;
 import org.apache.http.HttpStatus;
 import org.apache.http.HttpVersion;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -288,6 +289,25 @@ class SplunkSinkConnecterTest {
 
         assertTrue(errorMessages.get(SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PATH_CONF).get(0).contains("Configuration validation error"));
         assertTrue(errorMessages.get(SplunkSinkConnectorConfig.SSL_TRUSTSTORE_PASSWORD_CONF).get(0).contains("Configuration validation error"));
+    }
+
+    @Test
+    public void testValidationTimeoutConfiguration() {
+        Map<String, String> connectorConfig = getConnectorConfig();
+
+        SplunkSinkConnectorConfig config = new SplunkSinkConnectorConfig(connectorConfig);
+        com.splunk.hecclient.HecConfig hecConfigForValidate = config.getHecConfigForValidate();
+        
+        // Verify that validation uses hardcoded 10 second timeouts for all operations
+        Assert.assertEquals("Socket timeout for validation should be 5 seconds", 5, hecConfigForValidate.getSocketTimeout());
+        Assert.assertEquals("Connection timeout for validation should be 5 seconds", 5, hecConfigForValidate.getConnectionTimeout());
+        Assert.assertEquals("Connection request timeout for validation should be 5 seconds", 5, hecConfigForValidate.getConnectionRequestTimeout());
+        
+        // Compare with regular HecConfig which should have 60 second (default) timeouts
+        HecConfig regularHecConfig = config.getHecConfig();
+        Assert.assertEquals("Regular socket timeout should be 60 seconds", 60, regularHecConfig.getSocketTimeout());
+        Assert.assertEquals("Regular connection timeout should be 60 seconds", 60, regularHecConfig.getConnectionTimeout());
+        Assert.assertEquals("Regular connection request timeout should be 60 seconds", 60, regularHecConfig.getConnectionRequestTimeout());
     }
 
     private Map<String, String> getConnectorConfig() {
