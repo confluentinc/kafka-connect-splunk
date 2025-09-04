@@ -296,12 +296,12 @@ class SplunkSinkConnecterTest {
         Map<String, String> connectorConfig = getConnectorConfig();
 
         SplunkSinkConnectorConfig config = new SplunkSinkConnectorConfig(connectorConfig);
-        com.splunk.hecclient.HecConfig hecConfigForValidate = config.getHecConfigForValidate();
+        HecConfig hecConfigForValidate = config.getHecConfigForValidate();
         
         // Verify that validation uses hardcoded 10 second timeouts for all operations
-        Assert.assertEquals("Socket timeout for validation should be 5 seconds", 10, hecConfigForValidate.getSocketTimeout());
-        Assert.assertEquals("Connection timeout for validation should be 5 seconds", 10, hecConfigForValidate.getConnectionTimeout());
-        Assert.assertEquals("Connection request timeout for validation should be 5 seconds", 10, hecConfigForValidate.getConnectionRequestTimeout());
+        Assert.assertEquals("Socket timeout for validation should be 10 seconds", 10, hecConfigForValidate.getSocketTimeout());
+        Assert.assertEquals("Connection timeout for validation should be 10 seconds", 10, hecConfigForValidate.getConnectionTimeout());
+        Assert.assertEquals("Connection request timeout for validation should be 10 seconds", 10, hecConfigForValidate.getConnectionRequestTimeout());
         
         // Compare with regular HecConfig which should have 60 second (default) timeouts
         HecConfig regularHecConfig = config.getHecConfig();
