@@ -47,10 +47,11 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     static final String HTTP_KEEPALIVE_CONF = "splunk.hec.http.keepalive";
     static final String HEC_THREDS_CONF = "splunk.hec.threads";
     static final String SOCKET_TIMEOUT_CONF = "splunk.hec.socket.timeout"; // seconds
-    static final String SESSION_VALIDATION_TIMEOUT = "session.validation.timeout.ms";
-    static final int SESSION_VALIDATION_TIMEOUT_DEFAULT = 5000;
     static final String CONNECTION_TIMEOUT_CONF = "splunk.hec.connection.timeout"; // seconds
     static final String CONNECTION_REQUEST_TIMEOUT_CONF = "splunk.hec.connection.request.timeout"; // seconds
+    static final String VALIDATION_TIMEOUT_SECOND = "validation.timeout.second";
+    //10 second timeout for all validation operations to prevent hanging
+    static final int VALIDATION_TIMEOUT_SECOND_DEFAULT = 10;
     static final String SSL_VALIDATE_CERTIFICATES_CONF = "splunk.hec.ssl.validate.certs";
     static final String ENABLE_COMPRESSSION_CONF = "splunk.hec.enable.compression";
     // Acknowledgement Parameters
@@ -196,8 +197,8 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     final int maxBatchSize;
     final boolean httpKeepAlive;
     final int numberOfThreads;
+    final int validationTimeoutSeconds;
     final int socketTimeout;
-    final int socketTimeoutForValidation;
     final int connectionTimeout;
     final int connectionRequestTimeout;
     final boolean validateCertificates;
@@ -254,7 +255,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
         flushWindow = getInt(FLUSH_WINDOW_CONF);
         totalHecChannels = getInt(TOTAL_HEC_CHANNEL_CONF);
         socketTimeout = getInt(SOCKET_TIMEOUT_CONF);
-        socketTimeoutForValidation = getInt(SESSION_VALIDATION_TIMEOUT);
+        validationTimeoutSeconds = getInt(VALIDATION_TIMEOUT_SECOND);
         connectionTimeout = getInt(CONNECTION_TIMEOUT_CONF);
         connectionRequestTimeout = getInt(CONNECTION_REQUEST_TIMEOUT_CONF);
         enrichments = parseEnrichments(getString(ENRICHMENT_CONF));
@@ -317,8 +318,8 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
                 .define(HEADER_SOURCETYPE_CONF, ConfigDef.Type.STRING, "splunk.header.sourcetype", ConfigDef.Importance.MEDIUM, HEADER_SOURCETYPE_DOC)
                 .define(HEADER_HOST_CONF, ConfigDef.Type.STRING, "splunk.header.host", ConfigDef.Importance.MEDIUM, HEADER_HOST_DOC)
                 .define(LB_POLL_INTERVAL_CONF, ConfigDef.Type.INT, 120, ConfigDef.Importance.LOW, LB_POLL_INTERVAL_DOC)
-                .define(ENABLE_COMPRESSSION_CONF, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.MEDIUM, ENABLE_COMPRESSSION_DOC)
-                .defineInternal(SESSION_VALIDATION_TIMEOUT, ConfigDef.Type.INT, SESSION_VALIDATION_TIMEOUT_DEFAULT, ConfigDef.Importance.LOW);
+                .defineInternal(VALIDATION_TIMEOUT_SECOND, ConfigDef.Type.INT, VALIDATION_TIMEOUT_SECOND_DEFAULT, ConfigDef.Importance.LOW)
+                .define(ENABLE_COMPRESSSION_CONF, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.MEDIUM, ENABLE_COMPRESSSION_DOC);
     }
 
     /**
@@ -348,9 +349,9 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     public HecConfig getHecConfigForValidate() {
         HecConfig config = new HecConfig(Arrays.asList(splunkURI.split(",")), splunkToken);
         config.setDisableSSLCertVerification(!validateCertificates)
-            .setSocketTimeout(socketTimeoutForValidation)
-            .setConnectionTimeout(connectionTimeout)
-            .setConnectionRequestTimeout(connectionRequestTimeout)
+            .setSocketTimeout(validationTimeoutSeconds)
+            .setConnectionTimeout(validationTimeoutSeconds)
+            .setConnectionRequestTimeout(validationTimeoutSeconds)
             .setMaxHttpConnectionPerChannel(maxHttpConnPerChannel)
             .setTotalChannels(totalHecChannels)
             .setEventBatchTimeout(eventBatchTimeout)
