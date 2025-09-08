@@ -85,6 +85,9 @@ public class SplunkSinkConnector extends SinkConnector {
 
     @Override
     public Config validate(Map<String, String> connectorConfigs) {
+        long validationStartTime = System.currentTimeMillis();
+        log.info("Starting Splunk connector validation");
+        
         Config config = super.validate(connectorConfigs);
         SplunkSinkConnectorConfig connectorConfig;
         try {
@@ -104,11 +107,19 @@ public class SplunkSinkConnector extends SinkConnector {
         HecConfig hecConfig = connectorConfig.getHecConfigForValidate();
         try (CloseableHttpClient httpClient = createHttpClient(hecConfig)) {
 
+            long collectorValidationStart = System.currentTimeMillis();
             if (!validateCollector(httpClient, hecConfig, configValues)) {
+                long validationDuration = System.currentTimeMillis() - validationStartTime;
+                log.info("Validation failed after {} ms", validationDuration);
                 return config;
             }
+            long collectorValidationDuration = System.currentTimeMillis() - collectorValidationStart;
+            log.info("Collector validation completed in {} ms", collectorValidationDuration);
 
+            long accessValidationStart = System.currentTimeMillis();
             validateAccess(httpClient, hecConfig, configValues);
+            long accessValidationDuration = System.currentTimeMillis() - accessValidationStart;
+            log.info("Access validation completed in {} ms", accessValidationDuration);
 
         } catch (HecException e) {
             log.error("Configuration validation error", e);
@@ -126,6 +137,9 @@ public class SplunkSinkConnector extends SinkConnector {
             );
         }
 
+        long totalValidationDuration = System.currentTimeMillis() - validationStartTime;
+        log.info("Total validation completed in {} ms", totalValidationDuration);
+        
         return config;
     }
 
