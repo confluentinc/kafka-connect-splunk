@@ -31,7 +31,7 @@ public class SplunkSinkIT extends BaseSplunkSinkIT {
     await().atMost(CONSUME_MAX_DURATION_MS, TimeUnit.MILLISECONDS)
         .untilAsserted(() -> assertTrue(searchFromSplunkIndex(searchQuery, orderId).contains(orderId)));
 
-    String notPresent = "Bob";
+    String notPresent = "Bob_The_Builder";
     assertFalse(searchFromSplunkIndex(searchQuery, notPresent).contains(notPresent));
   }
 }
