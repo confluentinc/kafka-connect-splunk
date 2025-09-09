@@ -39,17 +39,16 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
 
   protected static final String SPLUNK_PASSWORD = "password";
   protected static final String SPLUNK_USERNAME = "admin";
-  protected static final String INDEXER_IP = "ind";
   protected static final String SPLUNK_HEC_TOKEN = "itest-token";
-
   protected static final int TASKS_MAX = 1;
-  protected static String SPLUNK_HEC_URL;
-  protected static String SPLUNK_BASE_URL;
   protected static final String TEST_INDEX = "main";
   protected static final String TEST_SOURCE_TYPE = "my_sourcetype";
-
+  protected static final String INDEXER_IP = "ind";
   private static final String SPLUNK_BASE_IMAGE = "splunk/splunk";
   private static final String SPLUNK_VERSION = "8.1";
+  private static final String AUTHORIZATION = "Authorization";
+  private static final String BASIC_ = "Basic ";
+  private static final String UTF8 = "UTF-8";
   private static final Map<String, String> splunkEnv = ImmutableMap.<String, String>builder()
       .put("SPLUNK_START_ARGS", "--accept-license")
       .put("SPLUNK_PASSWORD", SPLUNK_PASSWORD)
@@ -59,20 +58,23 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
       .build();
 
   @ClassRule
-  public static Network network = Network.newNetwork();
+  public static final Network network = Network.newNetwork();
 
   @ClassRule
-  public static GenericContainer<?> splunk = new GenericContainer<>(
+  public static final GenericContainer<?> splunk = new GenericContainer<>(
       DockerImageName.parse(SPLUNK_BASE_IMAGE + ":" + SPLUNK_VERSION))
       .withEnv(splunkEnv)
       .withNetwork(network)
       .withNetworkAliases(INDEXER_IP)
       .withExposedPorts(8000, 8089, 8088);
 
+  protected static String splunkHecUrl;
+  protected static String splunkBaseUrl;
+
   @BeforeClass
   public static void setupHec() throws Exception {
-    SPLUNK_HEC_URL = "https://" + splunk.getHost() + ":" + splunk.getMappedPort(8088);
-    SPLUNK_BASE_URL = "https://" + splunk.getHost() + ":" + splunk.getMappedPort(8089);
+    splunkHecUrl = "https://" + splunk.getHost() + ":" + splunk.getMappedPort(8088);
+    splunkBaseUrl = "https://" + splunk.getHost() + ":" + splunk.getMappedPort(8089);
 
     HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
     TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[]{
@@ -121,7 +123,7 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
 
     props.put(TOPICS_CONFIG, topic);
     props.put(INDEX_CONF, index);
-    props.put(URI_CONF, SPLUNK_HEC_URL);
+    props.put(URI_CONF, splunkHecUrl);
     props.put(TOKEN_CONF, SPLUNK_HEC_TOKEN);
     props.put(SSL_VALIDATE_CERTIFICATES_CONF, "false");
     props.put(SOURCETYPE_CONF, sourceType);
@@ -134,28 +136,28 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
     return "index=" + index + " sourcetype=" + sourceType;
   }
 
-  protected String searchFromSplunkIndex(String searchQuery, String expectedContent) throws Exception {
+  protected String searchFromSplunkIndex(String searchQuery) throws Exception {
     String jobId = submitSearchJob(searchQuery);
     if (jobId == null || !waitForSearchCompletion(jobId)) {
       return null;
     }
-    return getSearchResults(jobId, expectedContent);
+    return getSearchResults(jobId);
   }
 
   private String submitSearchJob(String searchQuery) throws Exception {
-    URL url = new URL(SPLUNK_BASE_URL + "/services/search/jobs?output_mode=json");
+    URL url = new URL(splunkBaseUrl + "/services/search/jobs?output_mode=json");
     HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
     conn.setRequestMethod("POST");
     conn.setDoOutput(true);
     conn.setConnectTimeout(10000);
     conn.setReadTimeout(10000);
-    conn.setRequestProperty("Authorization", "Basic " +
+    conn.setRequestProperty(AUTHORIZATION, BASIC_ +
         Base64.getEncoder().encodeToString((SPLUNK_USERNAME + ":" + SPLUNK_PASSWORD).getBytes()));
     conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-    String formData = "search=" + URLEncoder.encode("search " + searchQuery, "UTF-8") +
-        "&earliest_time=" + URLEncoder.encode("-15m@m", "UTF-8") +
-        "&latest_time=" + URLEncoder.encode("now", "UTF-8");
+    String formData = "search=" + URLEncoder.encode("search " + searchQuery, UTF8) +
+        "&earliest_time=" + URLEncoder.encode("-15m@m", UTF8) +
+        "&latest_time=" + URLEncoder.encode("now", UTF8);
     conn.getOutputStream().write(formData.getBytes());
     conn.getOutputStream().flush();
 
@@ -178,12 +180,12 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
 
   private boolean waitForSearchCompletion(String jobId) throws Exception {
     for (int i = 0; i < 60; i++) {
-      URL url = new URL(SPLUNK_BASE_URL + "/services/search/jobs/" + jobId + "?output_mode=json");
+      URL url = new URL(splunkBaseUrl + "/services/search/jobs/" + jobId + "?output_mode=json");
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod("GET");
       conn.setConnectTimeout(10000);
       conn.setReadTimeout(10000);
-      conn.setRequestProperty("Authorization", "Basic " +
+      conn.setRequestProperty(AUTHORIZATION, BASIC_ +
           Base64.getEncoder().encodeToString((SPLUNK_USERNAME + ":" + SPLUNK_PASSWORD).getBytes()));
 
       if (conn.getResponseCode() == 200) {
@@ -202,13 +204,13 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
     return false;
   }
 
-  private String getSearchResults(String jobId, String expectedContent) throws Exception {
-    URL url = new URL(SPLUNK_BASE_URL + "/services/search/jobs/" + jobId + "/results?output_mode=json&count=10");
+  private String getSearchResults(String jobId) throws Exception {
+    URL url = new URL(splunkBaseUrl + "/services/search/jobs/" + jobId + "/results?output_mode=json&count=10");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("GET");
     conn.setConnectTimeout(10000);
     conn.setReadTimeout(10000);
-    conn.setRequestProperty("Authorization", "Basic " +
+    conn.setRequestProperty(AUTHORIZATION, BASIC_ +
         java.util.Base64.getEncoder().encodeToString((SPLUNK_USERNAME + ":" + SPLUNK_PASSWORD).getBytes()));
 
     if (conn.getResponseCode() != 200) {
