@@ -34,16 +34,16 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     static final String SOURCE = "source";
     static final String SOURCETYPE = "sourcetype";
     // Required Parameters
-    static final String URI_CONF = "splunk.hec.uri";
-    static final String TOKEN_CONF = "splunk.hec.token";
+    public static final String URI_CONF = "splunk.hec.uri";
+    public static final String TOKEN_CONF = "splunk.hec.token";
     // General Parameters
-    static final String INDEX_CONF = "splunk.indexes";
+    public static final String INDEX_CONF = "splunk.indexes";
     static final String SOURCE_CONF = "splunk.sources";
-    static final String SOURCETYPE_CONF = "splunk.sourcetypes";
+    public static final String SOURCETYPE_CONF = "splunk.sourcetypes";
     static final String FLUSH_WINDOW_CONF = "splunk.flush.window";
     static final String TOTAL_HEC_CHANNEL_CONF = "splunk.hec.total.channels";
     static final String MAX_HTTP_CONNECTION_PER_CHANNEL_CONF = "splunk.hec.max.http.connection.per.channel";
-    static final String MAX_BATCH_SIZE_CONF = "splunk.hec.max.batch.size"; // record count
+    public static final String MAX_BATCH_SIZE_CONF = "splunk.hec.max.batch.size"; // record count
     static final String HTTP_KEEPALIVE_CONF = "splunk.hec.http.keepalive";
     static final String HEC_THREDS_CONF = "splunk.hec.threads";
     static final String SOCKET_TIMEOUT_CONF = "splunk.hec.socket.timeout"; // seconds
@@ -52,7 +52,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     static final String VALIDATION_TIMEOUT_SECOND = "validation.timeout.second";
     //10 second timeout for all validation operations to prevent hanging
     static final int VALIDATION_TIMEOUT_SECOND_DEFAULT = 10;
-    static final String SSL_VALIDATE_CERTIFICATES_CONF = "splunk.hec.ssl.validate.certs";
+    public static final String SSL_VALIDATE_CERTIFICATES_CONF = "splunk.hec.ssl.validate.certs";
     static final String ENABLE_COMPRESSSION_CONF = "splunk.hec.enable.compression";
     // Acknowledgement Parameters
     // Use Ack
