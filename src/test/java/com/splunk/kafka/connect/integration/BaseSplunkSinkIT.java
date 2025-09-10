@@ -47,7 +47,7 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
   private static final String SPLUNK_BASE_IMAGE = "splunk/splunk";
   private static final String SPLUNK_VERSION = "8.1";
   private static final String AUTHORIZATION = "Authorization";
-  private static final String BASIC_ = "Basic ";
+  private static final String BASIC = "Basic ";
   private static final String UTF8 = "UTF-8";
   private static final Map<String, String> splunkEnv = ImmutableMap.<String, String>builder()
       .put("SPLUNK_START_ARGS", "--accept-license")
@@ -136,6 +136,10 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
     return "index=" + index + " sourcetype=" + sourceType;
   }
 
+  protected String createExactMatchQuery(String index, String sourceType, String fieldName, String fieldValue) {
+    return "index=" + index + " sourcetype=" + sourceType + " " + fieldName + "=\"" + fieldValue + "\" | head 1";
+  }
+
   protected String searchFromSplunkIndex(String searchQuery) throws Exception {
     String jobId = submitSearchJob(searchQuery);
     if (jobId == null || !waitForSearchCompletion(jobId)) {
@@ -151,7 +155,7 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
     conn.setDoOutput(true);
     conn.setConnectTimeout(10000);
     conn.setReadTimeout(10000);
-    conn.setRequestProperty(AUTHORIZATION, BASIC_ +
+    conn.setRequestProperty(AUTHORIZATION, BASIC +
         Base64.getEncoder().encodeToString((SPLUNK_USERNAME + ":" + SPLUNK_PASSWORD).getBytes()));
     conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
@@ -185,7 +189,7 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
       conn.setRequestMethod("GET");
       conn.setConnectTimeout(10000);
       conn.setReadTimeout(10000);
-      conn.setRequestProperty(AUTHORIZATION, BASIC_ +
+      conn.setRequestProperty(AUTHORIZATION, BASIC +
           Base64.getEncoder().encodeToString((SPLUNK_USERNAME + ":" + SPLUNK_PASSWORD).getBytes()));
 
       if (conn.getResponseCode() == 200) {
@@ -205,12 +209,12 @@ public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
   }
 
   private String getSearchResults(String jobId) throws Exception {
-    URL url = new URL(splunkBaseUrl + "/services/search/jobs/" + jobId + "/results?output_mode=json&count=10");
+    URL url = new URL(splunkBaseUrl + "/services/search/jobs/" + jobId + "/results?output_mode=json");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod("GET");
     conn.setConnectTimeout(10000);
     conn.setReadTimeout(10000);
-    conn.setRequestProperty(AUTHORIZATION, BASIC_ +
+    conn.setRequestProperty(AUTHORIZATION, BASIC +
         java.util.Base64.getEncoder().encodeToString((SPLUNK_USERNAME + ":" + SPLUNK_PASSWORD).getBytes()));
 
     if (conn.getResponseCode() != 200) {

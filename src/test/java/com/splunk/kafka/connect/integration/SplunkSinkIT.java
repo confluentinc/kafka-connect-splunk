@@ -23,15 +23,22 @@ public class SplunkSinkIT extends BaseSplunkSinkIT {
     connect.configureConnector(CONNECTOR_NAME, getBaseConnectorProps(CONNECTOR_NAME, TEST_TOPIC));
     waitForConnectorToStart(CONNECTOR_NAME, 1);
 
-    String orderId = "ORD-" + System.currentTimeMillis();
-    String json = "{\"orderId\":\"" + orderId + "\",\"customer\":\"Alice\",\"total\":12.34}";
-    connect.kafka().produce(TEST_TOPIC, json);
+    String[] customers = {"Alice", "Bob", "Carol", "Dave", "Eve"};
+    String[] orderIds = new String[customers.length];
+    for (int i = 0; i < customers.length; i++) {
+      orderIds[i] = "ORD-" + (System.currentTimeMillis() + i);
+      String json = "{\"orderId\":\"" + orderIds[i] + "\",\"customer\":\"" + customers[i] + "\",\"total\":" + (10.0 + i) + "}";
+      connect.kafka().produce(TEST_TOPIC, json);
+    }
 
-    String searchQuery = createSearchQuery(TEST_INDEX, TEST_SOURCE_TYPE);
-    await().atMost(CONSUME_MAX_DURATION_MS, TimeUnit.MILLISECONDS)
-        .untilAsserted(() -> assertTrue(searchFromSplunkIndex(searchQuery).contains(orderId)));
+    for (String orderId : orderIds) {
+      String exactQuery = createExactMatchQuery(TEST_INDEX, TEST_SOURCE_TYPE, "orderId", orderId);
+      await().atMost(CONSUME_MAX_DURATION_MS, TimeUnit.MILLISECONDS)
+          .untilAsserted(() -> assertTrue(searchFromSplunkIndex(exactQuery).contains(orderId)));
+    }
 
-    String notPresent = "Bob";
-    assertFalse(searchFromSplunkIndex(searchQuery).contains(notPresent));
+    String notPresent = "THIS_STRING_SHOULD_NOT_EXIST_" + System.nanoTime();
+    String negativeQuery = createExactMatchQuery(TEST_INDEX, TEST_SOURCE_TYPE, "orderId", notPresent);
+    assertFalse(searchFromSplunkIndex(negativeQuery).contains(notPresent));
   }
 }
