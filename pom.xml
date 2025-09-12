@@ -22,6 +22,7 @@
         <junit.jupiter.version>5.3.2</junit.jupiter.version>
         <junit.vintage.version>5.3.2</junit.vintage.version>
         <junit.platform.version>1.3.2</junit.platform.version>
+        <testcontainers.version>1.19.7</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -42,7 +43,6 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-api</artifactId>
-            <version>2.8.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -162,6 +162,67 @@
             <version>2.23.4</version>
             <scope>test</scope>
         </dependency>
+
+        <!--
+        Add dependencies for the Connect integration test framework, which requires
+        the Kafka Connect runtime, the Kafka broker, and the Kafka clients.
+        Inherit all of the versions from the parent
+        -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <classifier>test</classifier>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-runtime</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-runtime</artifactId>
+            <type>test-jar</type>
+            <classifier>test</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_${kafka.scala.version}</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_${kafka.scala.version}</artifactId>
+            <type>test-jar</type>
+            <classifier>test</classifier>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.0.3</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <reporting>
@@ -265,6 +326,22 @@
                             <propertyName>surefireArgLine</propertyName>
                         </configuration>
                     </execution>
+
+                    <!-- Prepares the property pointing to
+                    the JaCoCo runtime agent for integration tests -->
+                    <execution>
+                        <id>pre-integration-test</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <destFile>${project.build.directory}/coverage-reports/jacoco-it.exec
+                            </destFile>
+                            <propertyName>failsafeArgLine</propertyName>
+                        </configuration>
+                    </execution>
                     <!--
                         Ensures that the code coverage report for unit tests is created after
                         unit tests have been run.
@@ -281,6 +358,22 @@
                             </dataFile>
                             <!-- Sets the output directory for the code coverage report. -->
                             <outputDirectory>${project.build.directory}/coverage-reports/jacoco-ut
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                    <!-- Ensures that the code coverage report for integration tests is created -->
+                    <execution>
+                        <id>post-integration-test</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Sets the path to the file which contains the execution data. -->
+                            <dataFile>${project.build.directory}/coverage-reports/jacoco-it.exec
+                            </dataFile>
+                            <!-- Sets the output directory for the code coverage report. -->
+                            <outputDirectory>${project.build.directory}/coverage-reports/jacoco-it
                             </outputDirectory>
                         </configuration>
                     </execution>
@@ -303,6 +396,10 @@
                         <include>**/*Tests.java</include>
                         <include>**/*TestCase.java</include>
                     </includes>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                        <exclude>**/integration/**</exclude>
+                    </excludes>
                     <properties>
                         <!-- <includeTags>fast</includeTags> -->
                         <excludeTags>slow</excludeTags>
@@ -315,6 +412,40 @@
                 </configuration>
             </plugin>
 
+            <!-- Maven Failsafe Plugin for Integration Tests -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.22.2</version>
+                <configuration>
+                    <argLine>${failsafeArgLine}</argLine>
+                    <skipTests>${skip.integration.tests}</skipTests>
+                    <useFile>false</useFile>
+                    <includes>
+                        <include>**/*IT.java</include>
+                        <include>**/integration/**/*Test.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/Test*.java</exclude>
+                        <exclude>**/*Test.java</exclude>
+                        <exclude>**/*Tests.java</exclude>
+                        <exclude>**/*TestCase.java</exclude>
+                    </excludes>
+                    <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+                    <properties>
+                        <excludeTags>manual</excludeTags>
+                    </properties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>integration-test</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
