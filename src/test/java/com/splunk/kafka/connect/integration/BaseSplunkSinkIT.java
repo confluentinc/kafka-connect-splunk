@@ -29,8 +29,17 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.splunk.kafka.connect.SplunkSinkConnectorConfig.*;
-import static org.apache.kafka.connect.runtime.ConnectorConfig.*;
+import static com.splunk.kafka.connect.SplunkSinkConnectorConfig.INDEX_CONF;
+import static com.splunk.kafka.connect.SplunkSinkConnectorConfig.MAX_BATCH_SIZE_CONF;
+import static com.splunk.kafka.connect.SplunkSinkConnectorConfig.SOURCETYPE_CONF;
+import static com.splunk.kafka.connect.SplunkSinkConnectorConfig.SSL_VALIDATE_CERTIFICATES_CONF;
+import static com.splunk.kafka.connect.SplunkSinkConnectorConfig.TOKEN_CONF;
+import static com.splunk.kafka.connect.SplunkSinkConnectorConfig.URI_CONF;
+import static org.apache.kafka.connect.runtime.ConnectorConfig.CONNECTOR_CLASS_CONFIG;
+import static org.apache.kafka.connect.runtime.ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG;
+import static org.apache.kafka.connect.runtime.ConnectorConfig.NAME_CONFIG;
+import static org.apache.kafka.connect.runtime.ConnectorConfig.TASKS_MAX_CONFIG;
+import static org.apache.kafka.connect.runtime.ConnectorConfig.VALUE_CONVERTER_CLASS_CONFIG;
 import static org.apache.kafka.connect.runtime.SinkConnectorConfig.TOPICS_CONFIG;
 
 public abstract class BaseSplunkSinkIT extends BaseConnectorIT {
