@@ -280,6 +280,32 @@ public class SplunkSinkConnectorConfigTest {
         Assert.assertFalse(s.contains(uu.configProfile.getToken()));
     }
 
+    @Test(expected = ConfigException.class)
+    public void testInvalidHecUri() {
+        UnitUtil uu = new UnitUtil(0);
+        Map<String, String> config = uu.createTaskConfig();
+        config.put(SplunkSinkConnectorConfig.URI_CONF, "{input splunk URI}");
+        new SplunkSinkConnectorConfig(config);
+    }
+
+    @Test
+    public void testValidHecUriMultiple() {
+        UnitUtil uu = new UnitUtil(0);
+        Map<String, String> config = uu.createTaskConfig();
+        config.put(SplunkSinkConnectorConfig.URI_CONF, "https://hec1.example.com:8088,https://hec2.example.com:8088");
+        SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(config);
+        Assert.assertEquals("https://hec1.example.com:8088,https://hec2.example.com:8088", connectorConfig.splunkURI);
+    }
+
+    @Test
+    public void testValidHecUriWithIpAddress() {
+        UnitUtil uu = new UnitUtil(0);
+        Map<String, String> config = uu.createTaskConfig();
+        config.put(SplunkSinkConnectorConfig.URI_CONF, "https://192.168.1.100:8088");
+        SplunkSinkConnectorConfig connectorConfig = new SplunkSinkConnectorConfig(config);
+        Assert.assertEquals("https://192.168.1.100:8088", connectorConfig.splunkURI);
+    }
+
     private void assertMeta(final SplunkSinkConnectorConfig connectorConfig) {
         UnitUtil uu = new UnitUtil(0);
 
