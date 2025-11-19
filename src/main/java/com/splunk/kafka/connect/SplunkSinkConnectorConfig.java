@@ -23,6 +23,8 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.sink.SinkConnector;
 import org.apache.kafka.connect.sink.SinkTask;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -282,7 +284,7 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
     public static ConfigDef conf() {
         return new ConfigDef()
                 .define(TOKEN_CONF, ConfigDef.Type.PASSWORD, ConfigDef.Importance.HIGH, TOKEN_DOC)
-                .define(URI_CONF, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH, URI_DOC)
+                .define(URI_CONF, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE, new UriValidator(), ConfigDef.Importance.HIGH, URI_DOC)
                 .define(RAW_CONF, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.MEDIUM, RAW_DOC)
                 .define(ACK_CONF, ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.MEDIUM, ACK_DOC)
                 .define(INDEX_CONF, ConfigDef.Type.STRING, "", ConfigDef.Importance.MEDIUM, INDEX_DOC)
@@ -512,6 +514,38 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
             throw new ConfigException("Either topics or topics.regex value must be provided in the config");
         } else if (StringUtils.isNotEmpty(topics) && StringUtils.isNotEmpty(topicsRegex)) {
             throw new ConfigException("Should not provide both topics and topics.regex's value at the same time in the config");
+        }
+    }
+
+    /**
+     * Validator for Splunk HEC URI configuration
+     */
+    private static class UriValidator implements ConfigDef.Validator {
+        @Override
+        public void ensureValid(String name, Object value) {
+            if (value == null || value.toString().trim().isEmpty()) {
+                throw new ConfigException(name, value, "URI cannot be null or empty");
+            }
+            String uriString = value.toString();
+            
+            // Validate each URI in the comma-separated list
+            String[] uris = uriString.split(",");
+            for (String uri : uris) {
+                try {
+                    URI parsedUri = new URI(uri.trim());
+                    if (parsedUri.getScheme() == null || 
+                        (!parsedUri.getScheme().equalsIgnoreCase("http") && 
+                         !parsedUri.getScheme().equalsIgnoreCase("https"))) {
+                        throw new ConfigException(name, uri, 
+                            "URI must start with http:// or https://");
+                    }
+                    if (parsedUri.getHost() == null || parsedUri.getHost().isEmpty()) {
+                        throw new ConfigException(name, uri, "URI must include a valid hostname");
+                    }
+                } catch (URISyntaxException e) {
+                    throw new ConfigException(name, uri, "Invalid URI format: " + e.getMessage());
+                }
+            }
         }
     }
 
