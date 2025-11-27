@@ -22,6 +22,8 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.sink.SinkConnector;
 import org.apache.kafka.connect.sink.SinkTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,6 +33,10 @@ import java.util.List;
 import java.util.Map;
 
 public final class SplunkSinkConnectorConfig extends AbstractConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SplunkSinkConnectorConfig.class);
+    private static final String URI_SCHEME_ERROR = "URI must start with http:// or https://";
+    private static final String URI_HOSTNAME_ERROR = "URI must include a valid hostname";
     // General
     static final String INDEX = "index";
     static final String SOURCE = "source";
@@ -536,11 +542,13 @@ public final class SplunkSinkConnectorConfig extends AbstractConfig {
                     if (parsedUri.getScheme() == null || 
                         (!parsedUri.getScheme().equalsIgnoreCase("http") && 
                          !parsedUri.getScheme().equalsIgnoreCase("https"))) {
+                        log.error(URI_SCHEME_ERROR);
                         throw new ConfigException(name, uri, 
-                            "URI must start with http:// or https://");
+                            URI_SCHEME_ERROR);
                     }
                     if (parsedUri.getHost() == null || parsedUri.getHost().isEmpty()) {
-                        throw new ConfigException(name, uri, "URI must include a valid hostname");
+                        log.error(URI_HOSTNAME_ERROR);
+                        throw new ConfigException(name, uri, URI_HOSTNAME_ERROR);
                     }
                 } catch (URISyntaxException e) {
                     throw new ConfigException(name, uri, "Invalid URI format: " + e.getMessage());
