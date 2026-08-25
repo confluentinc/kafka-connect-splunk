@@ -28,6 +28,40 @@ public class RawEventTest {
     static final ObjectMapper jsonMapper = new ObjectMapper();
     static final String separator = "###";
 
+    // Sensitive-log regression: when Jackson fails to serialize a raw JSON-object record value, the
+    // resulting exception is built over that value (its message/cause chain can carry it), so it
+    // must not be handed to the logger. The canary stands in for the record value.
+    private static final String RECORD_VALUE_CANARY = "S3cr3t-Splunk-Raw-Value-CANARY-7c21b5";
+
+    public static final class UnserializableRecordValue {
+        public String getSecret() {
+            throw new RuntimeException(RECORD_VALUE_CANARY);
+        }
+    }
+
+    @Test
+    public void getBytesDoesNotLogRecordValueOnSerializationFailure() {
+        Event event = new RawEvent(new UnserializableRecordValue(), null);
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        PrintStream cap = new PrintStream(buf, true);
+        PrintStream origErr = System.err;
+        PrintStream origOut = System.out;
+        System.setErr(cap);
+        System.setOut(cap);
+        try {
+            event.getBytes();
+            Assert.fail("expected HecException from failed serialization");
+        } catch (HecException expected) {
+            // expected: serialization of the record value failed
+        } finally {
+            System.setErr(origErr);
+            System.setOut(origOut);
+        }
+        String logged = buf.toString();
+        Assert.assertTrue("the ERROR log line should still fire", logged.contains("Invalid json data"));
+        Assert.assertFalse("record value must not reach the logs", logged.contains(RECORD_VALUE_CANARY));
+    }
+
     @Test
     public void createValidRawEvent() {
         String data = "this is splunk event";

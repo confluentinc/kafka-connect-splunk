@@ -65,7 +65,9 @@ public final class RawEvent extends Event {
             try {
                 bytes = jsonMapper.writeValueAsBytes(event);
             } catch (Exception ex) {
-                log.error("Invalid json data", ex);
+                // Log only the exception type: the exception is built over the Kafka record value
+                // and its message/cause chain may carry that value, which must not reach the logs.
+                log.error("Invalid json data, exception: {}", ex.getClass().getName());
                 throw new HecException("Failed to json marshal the data", ex);
             }
         }
