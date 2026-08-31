@@ -275,8 +275,11 @@ public final class SplunkSinkTask extends SinkTask implements PollerCallback {
                         record.topic(), record.kafkaPartition(), record.kafkaOffset(), ex);
                 continue;
             } catch (HecException ex) {
-                log.error("ignore malformed event for topicPartitionOffset=({}, {}, {})",
-                        record.topic(), record.kafkaPartition(), record.kafkaOffset(), ex);
+                // Log only the exception type, not the wrapped throwable: its cause is a
+                // serialization exception built over the Kafka record value, which must not be
+                // logged. The topic/partition/offset above already identify the record.
+                log.error("ignore malformed event for topicPartitionOffset=({}, {}, {}), exception: {}",
+                        record.topic(), record.kafkaPartition(), record.kafkaOffset(), ex.getClass().getName());
                 event = createHecEventFromMalformed(record);
             }
 

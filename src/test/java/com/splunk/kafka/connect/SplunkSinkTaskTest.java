@@ -26,9 +26,66 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.*;
 
 public class SplunkSinkTaskTest {
+    // Sensitive-log regression: a record whose value fails Jackson serialization makes
+    // createHecEventFrom throw a HecException wrapping that serialization exception. The catch at
+    // SplunkSinkTask logs it at ERROR; the wrapped throwable is built over the record value, so
+    // only its type may be logged. The canary stands in for the record value.
+    private static final String RECORD_VALUE_CANARY = "S3cr3t-Splunk-Sink-Value-CANARY-4b90ef";
+
+    public static final class UnserializableRecordValue {
+        public String getSecret() {
+            throw new RuntimeException(RECORD_VALUE_CANARY);
+        }
+    }
+
+    @Test
+    public void putDoesNotLogRecordValueOnMalformedEvent() {
+        UnitUtil uu = new UnitUtil(0);
+        Map<String, String> config = uu.createTaskConfig();
+        config.put(SplunkSinkConnectorConfig.RAW_CONF, String.valueOf(false));
+        config.put(SplunkSinkConnectorConfig.ACK_CONF, String.valueOf(true));
+        // force the single record to be flushed immediately instead of buffered
+        config.put(SplunkSinkConnectorConfig.MAX_BATCH_SIZE_CONF, String.valueOf(1));
+
+        SplunkSinkTask task = new SplunkSinkTask();
+        HecMock hec = new HecMock(task);
+        hec.setSendReturnResult(HecMock.success);
+        task.setHec(hec);
+
+        TopicPartition tp = new TopicPartition(uu.configProfile.getTopics(), 1);
+        List<TopicPartition> partitions = new ArrayList<>();
+        partitions.add(tp);
+        task.start(config);
+        task.open(partitions);
+
+        SinkRecord poisoned = new SinkRecord(uu.configProfile.getTopics(), 1, null, null, null,
+                new UnserializableRecordValue(), 0, 0L, TimestampType.NO_TIMESTAMP_TYPE);
+
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        PrintStream cap = new PrintStream(buf, true);
+        PrintStream origErr = System.err;
+        PrintStream origOut = System.out;
+        System.setErr(cap);
+        System.setOut(cap);
+        try {
+            task.put(Collections.singletonList(poisoned));
+        } finally {
+            System.setErr(origErr);
+            System.setOut(origOut);
+        }
+        String logged = buf.toString();
+        Assert.assertTrue("the malformed-event ERROR log line should fire",
+                logged.contains("ignore malformed event for topicPartitionOffset"));
+        Assert.assertFalse("record value must not reach the logs", logged.contains(RECORD_VALUE_CANARY));
+
+        task.stop();
+    }
+
     @Test
     public void startStopDefault() {
         SplunkSinkTask task = new SplunkSinkTask();
