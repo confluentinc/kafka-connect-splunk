@@ -126,7 +126,9 @@ public final class JsonEvent extends Event {
         try {
             return jsonMapper.writeValueAsString(this);
         } catch (Exception ex) {
-            log.error("failed to json serlized JsonEvent", ex);
+            // Log only the exception type: the exception is built over the Kafka record value and
+            // its message/cause chain may carry that value, which must not reach the logs.
+            log.error("failed to json serlized JsonEvent, exception: {}", ex.getClass().getName());
             throw new HecException("failed to json serialized JsonEvent", ex);
         }
     }
@@ -152,7 +154,9 @@ public final class JsonEvent extends Event {
         try {
             bytes = jsonMapper.writeValueAsBytes(this);
         } catch (Exception ex) {
-            log.error("Invalid json event", ex);
+            // Log only the exception type: the exception is built over the Kafka record value and
+            // its message/cause chain may carry that value, which must not reach the logs.
+            log.error("Invalid json event, exception: {}", ex.getClass().getName());
             throw new HecException("Failed to json marshal the event", ex);
         }
         return bytes;
