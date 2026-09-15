@@ -19,8 +19,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +30,65 @@ import java.util.Map;
 
 public class JsonEventTest {
     static final ObjectMapper jsonMapper = new ObjectMapper();
+
+    // Sensitive-log regression: when Jackson fails to serialize the record value, the resulting
+    // exception is built over that value (its message/cause chain can carry it), so it must not be
+    // handed to the logger. The canary below stands in for the record value; it must never appear
+    // in the captured log output.
+    private static final String RECORD_VALUE_CANARY = "S3cr3t-Splunk-Record-Value-CANARY-9f83a1";
+
+    // A record value whose Jackson serialization fails with the canary carried on the exception.
+    public static final class UnserializableRecordValue {
+        public String getSecret() {
+            throw new RuntimeException(RECORD_VALUE_CANARY);
+        }
+    }
+
+    @Test
+    public void getBytesDoesNotLogRecordValueOnSerializationFailure() {
+        Event event = new JsonEvent(new UnserializableRecordValue(), null);
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        PrintStream cap = new PrintStream(buf, true);
+        PrintStream origErr = System.err;
+        PrintStream origOut = System.out;
+        System.setErr(cap);
+        System.setOut(cap);
+        try {
+            event.getBytes();
+            Assert.fail("expected HecException from failed serialization");
+        } catch (HecException expected) {
+            // expected: serialization of the record value failed
+        } finally {
+            System.setErr(origErr);
+            System.setOut(origOut);
+        }
+        String logged = buf.toString();
+        Assert.assertTrue("the ERROR log line should still fire", logged.contains("Invalid json event"));
+        Assert.assertFalse("record value must not reach the logs", logged.contains(RECORD_VALUE_CANARY));
+    }
+
+    @Test
+    public void toStringDoesNotLogRecordValueOnSerializationFailure() {
+        Event event = new JsonEvent(new UnserializableRecordValue(), null);
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        PrintStream cap = new PrintStream(buf, true);
+        PrintStream origErr = System.err;
+        PrintStream origOut = System.out;
+        System.setErr(cap);
+        System.setOut(cap);
+        try {
+            event.toString();
+            Assert.fail("expected HecException from failed serialization");
+        } catch (HecException expected) {
+            // expected: serialization of the record value failed
+        } finally {
+            System.setErr(origErr);
+            System.setOut(origOut);
+        }
+        String logged = buf.toString();
+        Assert.assertTrue("the ERROR log line should still fire", logged.contains("failed to json serlized JsonEvent"));
+        Assert.assertFalse("record value must not reach the logs", logged.contains(RECORD_VALUE_CANARY));
+    }
 
     @Test
     public void createValidJsonEvent() {
