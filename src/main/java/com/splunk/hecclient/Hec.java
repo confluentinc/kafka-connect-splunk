@@ -28,6 +28,7 @@ import java.security.SecureRandom;
 import java.security.KeyManagementException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.connect.errors.ConnectException;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -196,7 +197,7 @@ public class Hec implements HecInf {
     public Hec(HecConfig config, CloseableHttpClient httpClient, Poller poller, LoadBalancerInf loadBalancer) {
         for (int i = 0; i < config.getTotalChannels(); ) {
             for (String uri : config.getUris()) {
-                Indexer indexer = new Indexer(uri, config.getToken(), httpClient, poller);
+                Indexer indexer = new Indexer(uri, httpClient, poller, config);
                 indexer.setKeepAlive(config.getHttpKeepAlive());
                 loadBalancer.add(indexer.getChannel().setTracking(config.getEnableChannelTracking()));
                 i++;
@@ -263,7 +264,13 @@ public class Hec implements HecInf {
     */
     public static CloseableHttpClient createHttpClient(final HecConfig config) {
         int poolSizePerDest = config.getMaxHttpConnectionPerChannel();
-
+        if (config.kerberosAuthEnabled()) {
+          try {
+            return new HttpClientBuilder().buildKerberosClient();
+          } catch (KeyStoreException | NoSuchAlgorithmException | KeyManagementException ex) {
+            throw new ConnectException("Unable to build Kerberos Client", ex);
+          }
+        }
         // Code block for default client construction
         if(!config.getHasCustomTrustStore() &&
            StringUtils.isBlank(config.getTrustStorePath()) &&
